@@ -102,3 +102,19 @@ def test_empty_text_rejected(monkeypatch):
     use_mock(monkeypatch, [])
     with pytest.raises(ValueError):
         ai_client.complete_summary("   ")
+
+
+def test_pricing_wildcard_and_unknown_fallbacks():
+    # any ollama model falls back to the ("ollama", "*") free rate
+    assert estimate_cost_usd("ollama", "llama3", 500_000, 500_000) == 0.0
+    # unknown model of a known paid provider => no guessed price
+    assert estimate_cost_usd("groq", "some-new-model", 1_000_000, 1_000_000) == 0.0
+    # unknown provider entirely => 0.0, not a KeyError
+    assert estimate_cost_usd("nope", "x", 1_000_000, 1_000_000) == 0.0
+
+
+def test_summary_strips_whitespace_and_rejects_blank_bullets():
+    s = Summary(bullets=["  one ", "two\n", "\tthree"])
+    assert s.bullets == ["one", "two", "three"]
+    with pytest.raises(ValueError):
+        Summary(bullets=["one", "   ", "three"])
