@@ -118,3 +118,26 @@ def test_summary_strips_whitespace_and_rejects_blank_bullets():
     assert s.bullets == ["one", "two", "three"]
     with pytest.raises(ValueError):
         Summary(bullets=["one", "   ", "three"])
+
+
+@pytest.mark.parametrize("payload", [
+    {"text": 123},
+    {"text": ["a", "b"]},
+    {"text": None},
+])
+def test_route_non_string_text_is_422_not_500(monkeypatch, payload):
+    mock = use_mock(monkeypatch, [])
+    from app.main import create_app
+    resp = create_app().test_client().post("/summarize", json=payload)
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "text must be a string"
+    assert mock.calls == 0  # provider never called
+
+
+def test_route_non_object_json_body_is_422_not_500(monkeypatch):
+    mock = use_mock(monkeypatch, [])
+    from app.main import create_app
+    resp = create_app().test_client().post("/summarize", json=["some text"])
+    assert resp.status_code == 422
+    assert resp.get_json()["error"] == "text is required"
+    assert mock.calls == 0

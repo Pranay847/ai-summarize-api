@@ -22,8 +22,12 @@ def create_app() -> Flask:
 
     @app.post("/summarize")
     def summarize():
-        body = request.get_json(silent=True) or {}
+        body = request.get_json(silent=True)
+        if not isinstance(body, dict):
+            body = {}  # missing, malformed, or non-object JSON (e.g. a list)
         text = body.get("text", "")
+        if not isinstance(text, str):
+            return jsonify(error="text must be a string"), 422
         try:
             result = complete_summary(text)
         except ValueError as e:
